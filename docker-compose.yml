@@ -1,0 +1,105 @@
+# Text-to-SQL: four services, each with one responsibility
+#   db         PostgreSQL with the store data
+#   query      read-only SQL execution service      (talks to db)
+#   inference  Qwen2.5-Coder-0.5B behind FastAPI     (natural language -> SQL)
+#   gui        Gradio page that orchestrates inference and query
+# Only the GUI is published to the host; the rest is reachable only
+# inside the private "backend" network, by service name.
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: store
+      POSTGRES_PASSWORD: store          # development only
+      POSTGRES_DB: store
+    volumes:
+      - type: bind
+        source: ./db/init
+        target: /docker-entrypoint-initdb.d
+        read_only: true
+        bind:
+          create_host_path: false       # fail if the folder is missing
+      - store-data:/var/lib/postgresql/data
+    healthcheck:
+      # TCP check: only passes after the init scripts finished
+      test: ["CMD-SHELL", "pg_isready -h localhost -U store -d store"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    mem_limit: 512m
+    restart: unless-stopped
+    networks: [backend]
+
+  query:
+    build: ./query
+    image: text2sql-query:0.1
+    environment:
+      DB_HOST: db                       # service name = hostname in the network
+      DB_PORT: "5432"
+      DB_NAME: store
+      DB_USER: readonly_user
+      DB_PASSWORD: readonly
+      MAX_ROWS: "100"
+      STATEMENT_TIMEOUT_MS: "5000"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    mem_limit: 256m
+    cpus: 0.5
+    restart: unless-stopped
+    networks: [backend]
+
+  inference:
+    build: ./inference
+    image: text2sql-inference:0.2
+    environment:
+      OMP_NUM_THREADS: "1"              # measured: 1 physical core, 2 threads were slower
+      SCHEMA_PATH: /app/schema.sql
+    volumes:
+      - type: bind
+        source: ./db/init/01_schema.sql
+        target: /app/schema.sql
+        read_only: true
+        bind:
+          create_host_path: false       # fail if the file is missing
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      start_period: 120s                # loading the model can take a while
+      retries: 5
+    mem_limit: 3g                       # measured ~2.6 GiB; OOM-killed at 1g
+    memswap_limit: 3g
+    cpus: 1
+    restart: unless-stopped
+    networks: [backend]
+
+  gui:
+    build: ./gui
+    image: text2sql-gui:0.1
+    environment:
+      INFERENCE_URL: http://inference:8000
+      QUERY_URL: http://query:8001
+    ports:
+      - "7860:7860"                     # the only port published to the host
+    depends_on:
+      inference:
+        condition: service_healthy
+      query:
+        condition: service_healthy
+    mem_limit: 512m
+    cpus: 0.5
+    restart: unless-stopped
+    networks: [backend]
+
+volumes:
+  store-data:
+
+networks:
+  backend:

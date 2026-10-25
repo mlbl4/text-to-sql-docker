@@ -22,6 +22,7 @@ snapshot_download('Qwen/Qwen2.5-Coder-0.5B-Instruct')"
 ENV HF_HUB_OFFLINE=1
 
 # 4) Application code: changes most often, so it goes last
-COPY model.py .
+COPY model.py app.py ./
 
-CMD ["python", "model.py"]
+EXPOSE 8000
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
