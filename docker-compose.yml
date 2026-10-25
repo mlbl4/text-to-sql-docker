@@ -57,7 +57,7 @@ services:
 
   inference:
     build: ./inference
-    image: text2sql-inference:0.2
+    image: text2sql-inference:0.3
     environment:
       OMP_NUM_THREADS: "1"              # measured: 1 physical core, 2 threads were slower
       SCHEMA_PATH: /app/schema.sql

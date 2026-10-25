@@ -6,22 +6,23 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# 1) PyTorch (CPU build): the heaviest layer and the one that changes least
+# 1) PyTorch (CPU build): the heaviest library, changes least
 RUN pip install --no-cache-dir torch==2.14.1 \
     --index-url https://download.pytorch.org/whl/cpu
 
-# 2) Other Python libraries: copy only the requirements first
+# 2) Only the tool needed to download the model
+RUN pip install --no-cache-dir huggingface_hub==2.3.0
+# 3) Model weights: depend only on the model, NOT on requirements.txt,
+#    so changing a library no longer re-downloads the 988 MB
+RUN python -c "from huggingface_hub import snapshot_download; \
+snapshot_download('Qwen/Qwen2.5-Coder-0.5B-Instruct')"
+ENV HF_HUB_OFFLINE=1
+
+# 4) Other Python libraries
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 3) Bake the model weights into the image
-RUN python -c "from huggingface_hub import snapshot_download; \
-snapshot_download('Qwen/Qwen2.5-Coder-0.5B-Instruct')"
-
-# From now on, never try to reach Hugging Face: use the baked-in weights
-ENV HF_HUB_OFFLINE=1
-
-# 4) Application code: changes most often, so it goes last
+# 5) Application code: changes most often, so it goes last
 COPY model.py app.py ./
 
 EXPOSE 8000
