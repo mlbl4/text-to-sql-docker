@@ -1,0 +1,22 @@
+[
+  {"id": 1, "question": "How many customers are there?",
+   "gold_sql": "SELECT COUNT(*) FROM customers;"},
+  {"id": 2, "question": "How many orders were placed by customers from Alicante?",
+   "gold_sql": "SELECT COUNT(*) FROM orders o JOIN customers c ON c.customer_id = o.customer_id WHERE c.city = 'Alicante';"},
+  {"id": 3, "question": "How many orders are there in each status? Show the status and the number of orders.",
+   "gold_sql": "SELECT status, COUNT(*) FROM orders GROUP BY status;"},
+  {"id": 4, "question": "What are the names and prices of the 3 most expensive products?",
+   "gold_sql": "SELECT name, unit_price FROM products ORDER BY unit_price DESC LIMIT 3;"},
+  {"id": 5, "question": "How many products are there in each category? Show the category name and the number of products.",
+   "gold_sql": "SELECT c.name, COUNT(*) FROM categories c JOIN products p ON p.category_id = c.category_id GROUP BY c.name;"},
+  {"id": 6, "question": "Which city has the most customers? Show the city and the number of customers.",
+   "gold_sql": "SELECT city, COUNT(*) FROM customers GROUP BY city ORDER BY COUNT(*) DESC LIMIT 1;"},
+  {"id": 7, "question": "How many orders were placed in 2026?",
+   "gold_sql": "SELECT COUNT(*) FROM orders WHERE EXTRACT(YEAR FROM order_date) = 2026;"},
+  {"id": 8, "question": "What is the total revenue of delivered orders? Revenue is quantity times unit price of the order items.",
+   "gold_sql": "SELECT SUM(oi.quantity * oi.unit_price) FROM orders o JOIN order_items oi ON oi.order_id = o.order_id WHERE o.status = 'delivered';"},
+  {"id": 9, "question": "Show the first name, last name and total amount spent of the 5 customers who spent the most.",
+   "gold_sql": "SELECT c.first_name, c.last_name, SUM(oi.quantity * oi.unit_price) AS total_spent FROM customers c JOIN orders o ON o.customer_id = c.customer_id JOIN order_items oi ON oi.order_id = o.order_id GROUP BY c.customer_id, c.first_name, c.last_name ORDER BY total_spent DESC LIMIT 5;"},
+  {"id": 10, "question": "What is the best-selling product by total quantity sold? Show the product name and the total quantity.",
+   "gold_sql": "SELECT p.name, SUM(oi.quantity) AS total_quantity FROM products p JOIN order_items oi ON oi.product_id = p.product_id GROUP BY p.name ORDER BY total_quantity DESC LIMIT 1;"}
+]

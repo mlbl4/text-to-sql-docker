@@ -1,0 +1,101 @@
+{
+  "summary": {
+    "accuracy": 0.5,
+    "correct": 5,
+    "wrong_result": 1,
+    "sql_error": 4,
+    "avg_seconds": 9.85
+  },
+  "results": [
+    {
+      "id": 1,
+      "question": "How many customers are there?",
+      "gold_sql": "SELECT COUNT(*) FROM customers;",
+      "predicted_sql": "SELECT count(*) FROM customers",
+      "outcome": "correct",
+      "error": null,
+      "seconds": 5.35
+    },
+    {
+      "id": 2,
+      "question": "How many orders were placed by customers from Alicante?",
+      "gold_sql": "SELECT COUNT(*) FROM orders o JOIN customers c ON c.customer_id = o.customer_id WHERE c.city = 'Alicante';",
+      "predicted_sql": "SELECT COUNT(*) FROM orders WHERE customer_id IN (SELECT customer_id FROM customers WHERE city = ' Alicante')",
+      "outcome": "wrong_result",
+      "error": null,
+      "seconds": 7.87
+    },
+    {
+      "id": 3,
+      "question": "How many orders are there in each status? Show the status and the number of orders.",
+      "gold_sql": "SELECT status, COUNT(*) FROM orders GROUP BY status;",
+      "predicted_sql": "SELECT status, COUNT(*) FROM orders GROUP BY status",
+      "outcome": "correct",
+      "error": null,
+      "seconds": 6.42
+    },
+    {
+      "id": 4,
+      "question": "What are the names and prices of the 3 most expensive products?",
+      "gold_sql": "SELECT name, unit_price FROM products ORDER BY unit_price DESC LIMIT 3;",
+      "predicted_sql": "SELECT p.name, p.unit_price\nFROM products p\nJOIN order_items oi ON p.product_id = oi.product_id\nGROUP BY p.product_id\nORDER BY p.unit_price DESC\nLIMIT 3;",
+      "outcome": "correct",
+      "error": null,
+      "seconds": 11.76
+    },
+    {
+      "id": 5,
+      "question": "How many products are there in each category? Show the category name and the number of products.",
+      "gold_sql": "SELECT c.name, COUNT(*) FROM categories c JOIN products p ON p.category_id = c.category_id GROUP BY c.name;",
+      "predicted_sql": "SELECT c.name, COUNT(o.product_id) FROM categories c JOIN products p ON c.category_id = p.category_id JOIN order_items oi ON p.product_id = oi.product_id GROUP BY c.name",
+      "outcome": "sql_error",
+      "error": "missing FROM-clause entry for table \"o\"\nLINE 1: SELECT c.name, COUNT(o.product_id) FROM categories c JOIN pr...\n                             ^",
+      "seconds": 11.21
+    },
+    {
+      "id": 6,
+      "question": "Which city has the most customers? Show the city and the number of customers.",
+      "gold_sql": "SELECT city, COUNT(*) FROM customers GROUP BY city ORDER BY COUNT(*) DESC LIMIT 1;",
+      "predicted_sql": "SELECT city, COUNT(*) FROM customers GROUP BY city ORDER BY COUNT(*) DESC LIMIT 1",
+      "outcome": "correct",
+      "error": null,
+      "seconds": 7.56
+    },
+    {
+      "id": 7,
+      "question": "How many orders were placed in 2026?",
+      "gold_sql": "SELECT COUNT(*) FROM orders WHERE EXTRACT(YEAR FROM order_date) = 2026;",
+      "predicted_sql": "SELECT COUNT(*) FROM orders WHERE order_date BETWEEN '2026-01-01' AND '2026-12-31'",
+      "outcome": "correct",
+      "error": null,
+      "seconds": 9.95
+    },
+    {
+      "id": 8,
+      "question": "What is the total revenue of delivered orders? Revenue is quantity times unit price of the order items.",
+      "gold_sql": "SELECT SUM(oi.quantity * oi.unit_price) FROM orders o JOIN order_items oi ON oi.order_id = o.order_id WHERE o.status = 'delivered';",
+      "predicted_sql": "SELECT SUM(quantity * unit_price) FROM order_items WHERE status = 'delivered'",
+      "outcome": "sql_error",
+      "error": "column \"status\" does not exist\nLINE 1: ...SUM(quantity * unit_price) FROM order_items WHERE status = '...\n                                                             ^",
+      "seconds": 7.39
+    },
+    {
+      "id": 9,
+      "question": "Show the first name, last name and total amount spent of the 5 customers who spent the most.",
+      "gold_sql": "SELECT c.first_name, c.last_name, SUM(oi.quantity * oi.unit_price) AS total_spent FROM customers c JOIN orders o ON o.customer_id = c.customer_id JOIN order_items oi ON oi.order_id = o.order_id GROUP BY c.customer_id, c.first_name, c.last_name ORDER BY total_spent DESC LIMIT 5;",
+      "predicted_sql": "SELECT c.first_name, c.last_name, SUM(i.quantity * oi.unit_price) as total_spent\nFROM customers c\nJOIN orders o ON c.customer_id = o.customer_id\nJOIN order_items oi ON o.order_id = oi.order_id\nWHERE o.status = 'shipped'\nGROUP BY c.customer_id\nORDER BY total_spent DESC\nLIMIT 5;",
+      "outcome": "sql_error",
+      "error": "missing FROM-clause entry for table \"i\"\nLINE 1: SELECT c.first_name, c.last_name, SUM(i.quantity * oi.unit_p...\n                                              ^",
+      "seconds": 18.3
+    },
+    {
+      "id": 10,
+      "question": "What is the best-selling product by total quantity sold? Show the product name and the total quantity.",
+      "gold_sql": "SELECT p.name, SUM(oi.quantity) AS total_quantity FROM products p JOIN order_items oi ON oi.product_id = p.product_id GROUP BY p.name ORDER BY total_quantity DESC LIMIT 1;",
+      "predicted_sql": "SELECT p.name, SUM(i.quantity) as total_quantity_sold\nFROM products p\nJOIN order_items oi ON p.product_id = oi.product_id\nGROUP BY p.product_id\nORDER BY total_quantity_sold DESC\nLIMIT 1;",
+      "outcome": "sql_error",
+      "error": "missing FROM-clause entry for table \"i\"\nLINE 1: SELECT p.name, SUM(i.quantity) as total_quantity_sold\n                           ^",
+      "seconds": 12.65
+    }
+  ]
+}
